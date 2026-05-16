@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1] — 2026-05-16
+
+### Added
+
+#### SSM Magic-Bytes (1-byte system-task routing header)
+
+New module `tibet_cap_bus.ssm_magic` implements the spec in
+`SSM-MAGIC-BYTES.md`:
+
+- **`Priority` enum** — 4 levels (IDLE/REALTIME/STANDARD/CRITICAL)
+- **`Intent` enum** — 4 modes (DISPATCH/RECEIPT/HOPOFF/HEARTBEAT)
+- **`Hardware` enum** — 16 classes (ANY/GPU/TPU/ENCRYPTED_RAM/TEE/...)
+- **`encode(priority, intent, hardware)`** → byte (0-255)
+- **`decode(byte)`** → (Priority, Intent, Hardware|int)
+- **`describe(byte)`** → human-readable string
+- **`magic_bytes_from_event(event)`** → lossy projection from cap-bus event
+
+Allows **sub-ms routing decisions** without payload deserialization
+via 1-byte bitwise extraction:
+
+```python
+priority = byte & 0b00000011
+intent   = (byte >> 2) & 0b00000011
+hardware = (byte >> 4) & 0b00001111
+```
+
+Poster:
+
+> Filename for messages. Magic-bytes for system tasks.
+> One byte, three dimensions, sub-ms routing.
+
+#### Test coverage
+
+- 21 new tests for `ssm_magic` (encode/decode roundtrip, spec examples,
+  boundaries, event projection, bitwise routing)
+- **Total package tests: 37 passing**
+
+### Spec
+
+- `SSM-MAGIC-BYTES.md` — full specification, candidate §X for
+  IETF SSM-draft `tibet-semantic-surface-manifest-01`
+
+---
+
 ## [0.1.0] — 2026-05-16
 
 First production release. Migrated from sandbox sketch
