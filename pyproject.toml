@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tibet-cap-bus"
+version = "0.1.0"
+description = "Identity-bound causal command substrate from sealed caps. Implements lane_collision_policy + coffee_lane_policy (frozen vs fork-on-hop-off resume) for AI continuity governance."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "Jasper van de Meent", email = "jasper@humotica.nl" },
+    { name = "Codex", email = "codex@humotica.nl" },
+    { name = "Root AI (Claude)", email = "root_ai@humotica.nl" },
+]
+keywords = [
+    "tibet",
+    "cap-bus",
+    "cap-stream",
+    "command-substrate",
+    "causal",
+    "lamport",
+    "lane-policy",
+    "coffee-lane-policy",
+    "lane-collision-policy",
+    "resume-semantics",
+    "frozen-resume",
+    "fork-on-hop-off",
+    "mux",
+    "spaceshuttle",
+    "dgx",
+    "ainternet",
+    "continuity",
+    "agentic",
+    "governance",
+    "humotica",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "typer>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+
+[project.scripts]
+tibet-cap-bus = "tibet_cap_bus.cli:main"
+cap-stream = "tibet_cap_bus.cli:main"
+
+[project.urls]
+Homepage = "https://humotica.com/cap-bus"
+Repository = "https://github.com/jaspertvdm/tibet-cap-bus"
+Documentation = "https://github.com/jaspertvdm/tibet-cap-bus#readme"
+Changelog = "https://github.com/jaspertvdm/tibet-cap-bus/blob/main/CHANGELOG.md"
+Roadmap = "https://github.com/jaspertvdm/tibet-cap-bus/blob/main/ROADMAP.md"
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/fixtures", "/README.md", "/CHANGELOG.md", "/ROADMAP.md", "/LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tibet_cap_bus"]
