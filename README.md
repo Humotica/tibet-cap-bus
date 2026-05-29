@@ -32,9 +32,51 @@ sender
 - **Gateway-compatible event export** — `tibet-cap-bus.gateway-event.v1` contract
 - **Validator + fixture** — `validate-gateway-event` CLI + reference JSON fixture
 - **First-class `.aint` actor binding** + JIS attestation fields
+- **`airlock_runtime_verdict.v1` contract** *(0.1.3)* — runtime-posture signal layer for the immune-switch pipeline (see below)
+- **`verdict_transitions`** *(0.1.3)* — posture-transition builder that emits `gateway-event.v1` records
 
 In-memory adapters are placeholders. Real implementations land via Protocol replacement
 (see `ROADMAP.md` for the 0.2.x release line).
+
+## Immune-switch contracts (since 0.1.3)
+
+The signal layer for the `tibet-pol → snaft → cap-bus → tibet-airlock` immune-switch
+pipeline. tibet-cap-bus owns the wire-format; the producers and consumers live in
+their own packages and do not depend on each other.
+
+```python
+from tibet_cap_bus import (
+    VERDICT_KIND,                       # "airlock_runtime_verdict.v1"
+    validate_verdict_record,            # contract validation
+    check_mode_coherence,               # soft warn on misconfigured emitters
+    make_posture_transition_event,      # gateway-event.v1 builder for transitions
+    POSTURE_TRANSITION_INTENT,          # "posture.transition.v1"
+)
+
+verdict = {
+    "kind": VERDICT_KIND,
+    "verdict_id": "verdict_demo_001",
+    "timestamp": "2026-05-29T14:00:00+00:00",
+    "emitter": "jis:humotica:tibet-pol",
+    "runtime_mode": "python_fallback",
+    "rust_airlock": "offline",
+    "trust_kernel": "online_without_airlock",
+    "python_fallback": "enabled",
+    "external_ai_inbound": "deny",                  # the invariant kicks in
+    "execution_policy": "local_or_operator_approved_only",
+    "snaft_posture": "quarantine_external_ai",
+    "reason": "Bolle airlock runtime unavailable; Python fallback is not a production isolation boundary.",
+}
+
+assert validate_verdict_record(verdict) == []
+assert check_mode_coherence(verdict) == []
+```
+
+The 4 runtime-modes — `embedded_online` / `kernel_online` / `python_fallback` / `offline` —
+map deterministically to 3 snaft postures: `normal_zero_trust` / `quarantine_external_ai` /
+`hard_quarantine`. Snaft consumers (see `snaft.posture.consume_verdict`) call
+`make_posture_transition_event(...)` from this package to log transitions as
+`gateway-event.v1` records. Reference: Codex policy 2026-05-29 §"Runtime Modes".
 
 ## Why this exists
 
@@ -306,3 +348,26 @@ Replace `EchoExecutor` with:
 ## Short framing
 
 This sketch is not the product. It is the **attachment point** for the product.
+
+
+## Enterprise
+
+For private hub hosting, SLA support, custom integrations, or compliance guidance:
+
+| | |
+|---|---|
+| **Enterprise** | enterprise@humotica.com |
+| **Support** | support@humotica.com |
+| **Security** | security@humotica.com |
+
+## License
+
+MIT
+
+## Credits
+
+Designed by [Jasper van de Meent](https://github.com/jaspertvdm). Built by Jasper and [Root AI](https://humotica.com) as part of [HumoticaOS](https://humotica.com).
+
+---
+
+**Stack-positie:** Groep `agentic` · Bootstrap = OSAPI-handshake naar [`tibet`](https://pypi.org/project/tibet-core/) + [`jis`](https://pypi.org/project/jis-core/) (fail → snaft-rule + tibet-pol-rapport) · ← [`ainternet`](https://pypi.org/project/ainternet/) · [`tibet-triage`](https://pypi.org/project/tibet-triage/) → · See `STACK.md` · See `demo/golden-path/` for the spine end-to-end.

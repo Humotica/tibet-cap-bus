@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tibet-cap-bus"
-version = "0.1.1"
-description = "Identity-bound causal command substrate from sealed caps. Implements lane_collision_policy + coffee_lane_policy (frozen vs fork-on-hop-off resume) for AI continuity governance."
+version = "0.1.3"
+description = "Identity-bound causal command substrate. Lane policies for AI continuity + gateway-event.v1 contract + airlock_runtime_verdict.v1 immune-switch contract + posture-transition event builder."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

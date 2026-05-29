@@ -3,6 +3,7 @@
 Public API:
 - Runtime: CapBusRuntime + helpers
 - Event contract: validate_gateway_event_record + load_event_records
+- Verdict contract: validate_verdict_record + check_mode_coherence (airlock_runtime_verdict.v1 immune-switch)
 - SSM magic-bytes: 1-byte routing header (Priority/Intent/Hardware)
 """
 
@@ -10,6 +11,18 @@ from .event_contract import (
     load_event_records,
     validate_gateway_event_record,
     validate_gateway_event_records,
+)
+from .verdict_contract import (
+    VERDICT_KIND,
+    check_mode_coherence,
+    load_verdict_records,
+    validate_verdict_record,
+    validate_verdict_records,
+)
+from .verdict_transitions import (
+    POSTURE_TRANSITION_INTENT,
+    diff_switches,
+    make_posture_transition_event,
 )
 from .models import Cap, CapReceipt, ExecutionResult, UsageEvent
 from .runtime import (

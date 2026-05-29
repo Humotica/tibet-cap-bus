@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.3] — 2026-05-29
+
+### Added
+
+#### `airlock_runtime_verdict.v1` contract — immune-switch signal layer
+
+- `verdict_contract` module — `validate_verdict_record`, `validate_verdict_records`, `check_mode_coherence`, `load_verdict_records`, `VERDICT_KIND` constant
+- 4-mode posture taxonomy: `embedded_online` / `kernel_online` / `python_fallback` / `offline`
+- Enum sets: `ALLOWED_RUNTIME_MODES`, `ALLOWED_RUST_AIRLOCK_STATES`, `ALLOWED_TRUST_KERNEL_STATES`, `ALLOWED_PYTHON_FALLBACK_STATES`, `ALLOWED_EXTERNAL_AI_INBOUND`, `ALLOWED_EXECUTION_POLICIES`, `ALLOWED_SNAFT_POSTURES`
+- Coherence checker: soft warns when downstream fields do not match expected values for `runtime_mode` (catches misconfigured emitters)
+- Fixture `fixtures/airlock-runtime-verdict.v1.example.json` — one verdict per runtime mode (loadable for tests / demos)
+
+#### `verdict_transitions` — posture-transition gateway-event builder
+
+- `make_posture_transition_event(...)` builds a `gateway-event.v1`-shaped record for snaft consumers to emit on posture transitions; validates against `validate_gateway_event_record` before returning
+- `diff_switches(previous, current, keys)` helper for callers to populate `switches_changed` cleanly
+- `POSTURE_TRANSITION_INTENT` = `"posture.transition.v1"`
+
+### Tests
+
+- +8 tests for `verdict_contract` (load, validate, coherence)
+- +13 tests for `verdict_transitions` (builder, cold-start, payload diff, validation)
+- All 72 cap-bus tests pass — no breakage from existing 51 tests
+
+### Reference
+
+Codex policy: `sandbox/ai/codex/airlock-runtime-policy-immune-switch-2026-05-29.md`
+
+Pipeline end-to-end demonstrated in `demo/airlock-immune-switch-demo.py` (5 scenarios, 0 errors, 5 transitions tracked).
+
+---
+
 ## [0.1.1] — 2026-05-16
 
 ### Added
