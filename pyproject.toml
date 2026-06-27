@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tibet-cap-bus"
-version = "0.1.4"
+version = "0.1.5"
 description = "Identity-bound causal command substrate. Lane policies for AI continuity + gateway-event.v1 contract + airlock_runtime_verdict.v1 immune-switch contract + posture-transition event builder."
 readme = "README.md"
 license = "MIT"

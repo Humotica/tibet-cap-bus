@@ -44,6 +44,14 @@ from .ssm_magic import (
     describe as describe_magic_bytes,
     magic_bytes_from_event,
 )
+from .gpu_mailbox import (
+    GPURingBufferInjector,
+    ContentAddressedVRAM,
+    PossessionReceipt,
+    TTLEnforcer,
+    JISPrefetcher,
+    resolve_waint_block_offset,
+)
 
 __all__ = [
     "Cap",
@@ -68,6 +76,13 @@ __all__ = [
     "decode_magic_bytes",
     "describe_magic_bytes",
     "magic_bytes_from_event",
+    # GPU mailbox (lifted from gravity.aint reference, single-source on tibet_mux.verify)
+    "GPURingBufferInjector",
+    "ContentAddressedVRAM",
+    "PossessionReceipt",
+    "TTLEnforcer",
+    "JISPrefetcher",
+    "resolve_waint_block_offset",
 ]
 
-__version__ = "0.1.1"
+__version__ = "0.1.5"
