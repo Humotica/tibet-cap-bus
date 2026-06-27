@@ -67,9 +67,13 @@ def resolve_waint_block_offset(waint_actor: str, causal_rank: int) -> int:
 class GPURingBufferInjector:
     """Inject a cap into the pinned-host-DMA GPU ring buffer (Injector protocol)."""
 
-    def __init__(self, ring_size_mib: int = RING_SIZE_MIB) -> None:
+    def __init__(self, ring_size_mib: int = RING_SIZE_MIB, sealer: Any = None) -> None:
         self.ring_size_mib = ring_size_mib
         self.active_slots: dict[str, dict[str, Any]] = {}
+        # Optional AES-NI onion sealer (tibet_cap_bus.onion.OnionSealer). When set,
+        # inject_payload seals the block with a causal-chain-derived key before it
+        # enters the ring — a stale/broken chain yields an undecryptable payload.
+        self.sealer = sealer
 
     def inject(self, cap: Cap, lane_id: str, causal_rank: int) -> tuple[str, PhaseEvidence]:
         """Place the cap into the executor-bound GPU ring memory offset."""
@@ -98,6 +102,37 @@ class GPURingBufferInjector:
                 "does_not_skip": ["host-ram"],
             },
         )
+
+    def inject_payload(
+        self,
+        cap: Cap,
+        lane_id: str,
+        causal_rank: int,
+        payload: bytes,
+        *,
+        prev_receipt_hash: str,
+        causal_seq: int,
+    ) -> tuple[str, bytes, PhaseEvidence]:
+        """Inject a cap AND its payload bytes. If a sealer is configured, the
+        payload is sealed with an AES-NI onion keyed by the causal chain
+        (prev_receipt_hash || causal_seq) before it enters the ring. The bytes
+        returned are what actually travels: sealed when a sealer is present, raw
+        otherwise. A stale/broken chain -> wrong key -> the consumer cannot open
+        it (the self-blocker)."""
+        slot_id, evidence = self.inject(cap, lane_id, causal_rank)
+        if self.sealer is None:
+            self.active_slots[slot_id]["sealed"] = False
+            evidence.details["onion"] = "none (no sealer configured)"
+            return slot_id, payload, evidence
+        from .onion import lane_aad  # local import: onion is optional
+        aad = lane_aad(lane_id, cap.cap_id)
+        sealed = self.sealer.seal(payload, prev_receipt_hash, causal_seq, aad=aad)
+        self.active_slots[slot_id]["sealed"] = True
+        self.active_slots[slot_id]["onion_bytes"] = len(sealed)
+        self.active_slots[slot_id]["causal_seq"] = causal_seq
+        evidence.details["onion"] = "aes-256-gcm (aes-ni), causal-chain-keyed"
+        evidence.details["onion_bytes"] = len(sealed)
+        return slot_id, sealed, evidence
 
 
 # ─────────────────────────────────────────────────────────────────
