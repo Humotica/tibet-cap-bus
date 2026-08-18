@@ -95,7 +95,45 @@ bytes (`0xTI 0xBE 0xT0 0x01` or similar — see `tibet-zip` spec) and
 | `0101` | Real-time scheduler            | RT kernel host                      |
 | `0110` | Bonded NIC (10 Gbps+)          | Route via bonded uplink            |
 | `0111` | Quantum-safe path              | PQC cipher suite required           |
-| `1000-1111` | Reserved / vendor extensions | (Vendor-specific, no semantics)   |
+| `1000-1111` | Reserved / vendor extensions | (see **Lifecycle band** below)     |
+
+---
+
+## Lifecycle band (reboot / shutdown / logout)
+
+The reserved hardware band `1000–1111` carries **host-lifecycle transitions** — but
+only on the **HEARTBEAT** intent channel (bits 2-3 = `11`), the liveness channel that
+already carries `offline_fallback`. In any other intent the same nibble is an ordinary
+reserved/vendor hardware value; the recognizer returns `None`.
+
+| Byte   | Intent    | Band   | Action     | Relationship effect                           |
+|--------|-----------|--------|------------|-----------------------------------------------|
+| `0x8C` | HEARTBEAT | `1000` | `REBOOT`   | down, returning — peer holds the relation warm, expects re-attest |
+| `0x9C` | HEARTBEAT | `1001` | `SHUTDOWN` | graceful absence, no promised return — cold, relation intact |
+| `0xAC` | HEARTBEAT | `1010` | `LOGOUT`   | identity/coupling detaches; the host may stay powered |
+| `1011–1111` | HEARTBEAT | — | *(spare lifecycle)* | reserved |
+
+Canonical bytes pin priority bits `00`; priority is an orthogonal routing axis the
+recognizer ignores, so a caller may raise it without changing what the byte means.
+
+### Invariant — **header may hold, never decide**
+
+These bytes are **non-authoritative routing hints**. A carrier / relay / app / lower
+matroshka layer may *see* one and **hold** (start a warm-hold timer, pre-colour a tick)
+but MUST NOT enact host-lifecycle from the plaintext byte. Enactment is authorised only
+when the receiving layer's:
+
+- **floor** grants lifecycle handling at all (a pure envelope-carrier's floor does not), **and**
+- it holds a **mandate to act**: a live **presence posture** OR an **`on_behalf_of`** delegation.
+
+Anything else stays a HINT. Even when authorised, the byte still does not decide — the
+actual transition travels as a **sealed ledger/CLI record** (and `REBOOT` additionally
+passes the SNAFT `sys_reboot` syscall-risk gate). This is precisely what stops a layer
+that should only carry envelopes from suddenly "understanding" reboot/shutdown/logout.
+
+Reference: `resolve_lifecycle()` in `ssm_magic.py` returns `NOT_LIFECYCLE` / `HOLD` /
+`ACT` and encodes exactly this gate. The status itself lives in the 16-bit MUX frame
+(`0x4000` alive / `0x0000:reason` dark); the SSM byte only routes.
 
 ---
 

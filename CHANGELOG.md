@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+#### SSM lifecycle band — reboot / shutdown / logout on the HEARTBEAT channel
+
+- `Lifecycle` enum in the reserved hardware band: `REBOOT` (0x8C), `SHUTDOWN` (0x9C), `LOGOUT` (0xAC) — carried only on `Intent.HEARTBEAT`; any other intent leaves the nibble as a raw reserved/vendor hardware value.
+- `encode_lifecycle` / `decode_lifecycle` — recognizer is priority-agnostic and fires only on HEARTBEAT + a defined band value.
+- `resolve_lifecycle` + `LifecycleAuthority` (`NOT_LIFECYCLE` / `HOLD` / `ACT`) + `LifecycleVerdict` — enforces the invariant **header may hold, never decide**: a lifecycle byte is actionable only under the receiving layer's floor AND (live presence OR `on_behalf_of` mandate); otherwise it stays a non-authoritative hint. Even ACT still requires the accompanying sealed ledger/CLI record to enact.
+- Spec: `SSM-MAGIC-BYTES.md` gains the Lifecycle-band section + the invariant.
+- 13 new tests (canonical bytes, priority-orthogonality, HEARTBEAT-only recognizer, the full authority matrix).
+
+---
+
 ## [0.1.3] — 2026-05-29
 
 ### Added

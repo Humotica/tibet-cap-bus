@@ -6,9 +6,14 @@ from tibet_cap_bus.ssm_magic import (
     Priority,
     Intent,
     Hardware,
+    Lifecycle,
+    LifecycleAuthority,
     encode,
     decode,
     describe,
+    encode_lifecycle,
+    decode_lifecycle,
+    resolve_lifecycle,
     magic_bytes_from_event,
 )
 
@@ -222,3 +227,79 @@ class TestBitwiseRouting:
             hardware=Hardware.GPU,
         )
         assert ((byte & 0b11110000) >> 4) == Hardware.GPU.value
+
+
+class TestLifecycleBand:
+    """Reserved hw-band (0b1000-) carries reboot/shutdown/logout on the HEARTBEAT channel."""
+
+    def test_canonical_bytes(self):
+        # The exact bytes agreed with Jasper: intent=HEARTBEAT, priority bits 00.
+        assert encode_lifecycle(Lifecycle.REBOOT) == 0x8C
+        assert encode_lifecycle(Lifecycle.SHUTDOWN) == 0x9C
+        assert encode_lifecycle(Lifecycle.LOGOUT) == 0xAC
+
+    def test_roundtrip(self):
+        for action in Lifecycle:
+            assert decode_lifecycle(encode_lifecycle(action)) is action
+
+    def test_priority_is_orthogonal_to_identity(self):
+        # Raising priority does not change what the byte MEANS.
+        b = encode_lifecycle(Lifecycle.REBOOT, priority=Priority.CRITICAL)
+        assert b != 0x8C
+        assert decode_lifecycle(b) is Lifecycle.REBOOT
+
+    def test_only_heartbeat_intent_is_a_lifecycle_hint(self):
+        # Same hw-nibble 0b1000 under a NON-heartbeat intent is an ordinary reserved hw value.
+        non_hb = encode(priority=Priority.IDLE, intent=Intent.DISPATCH, hardware=0b1000)
+        assert decode_lifecycle(non_hb) is None
+        _, _, hw = decode(non_hb)
+        assert hw == 0b1000  # still routable as raw hardware
+
+    def test_ordinary_routing_byte_is_not_lifecycle(self):
+        assert decode_lifecycle(0x19) is None  # REALTIME/HOPOFF/GPU
+        assert decode_lifecycle(0x00) is None
+
+    def test_undefined_band_value_is_not_lifecycle(self):
+        # HEARTBEAT + a spare band slot (0b1111) that is not a defined Lifecycle.
+        spare = encode(priority=Priority.IDLE, intent=Intent.HEARTBEAT, hardware=0b1111)
+        assert decode_lifecycle(spare) is None
+
+    def test_describe_marks_it_as_a_hint(self):
+        assert "lifecycle:REBOOT" in describe(0x8C)
+        assert "never authoritative" in describe(0x8C)
+
+
+class TestLifecycleInvariant:
+    """header may hold, never decide — actionable only under floor + (presence OR on_behalf_of)."""
+
+    REBOOT = encode_lifecycle(Lifecycle.REBOOT)
+
+    def test_pure_carrier_holds(self):
+        # A carrier whose floor does not grant lifecycle handling: HOLD, never ACT.
+        v = resolve_lifecycle(self.REBOOT, floor_grants_lifecycle=False)
+        assert v.authority is LifecycleAuthority.HOLD
+        assert v.action is Lifecycle.REBOOT
+
+    def test_floor_is_a_hard_gate(self):
+        # Even WITH presence + mandate, no floor => HOLD. The carrier never "understands" lifecycle.
+        v = resolve_lifecycle(self.REBOOT, floor_grants_lifecycle=False,
+                              presence_posture="human", on_behalf_of="owner")
+        assert v.authority is LifecycleAuthority.HOLD
+
+    def test_floor_without_mandate_holds(self):
+        v = resolve_lifecycle(self.REBOOT, floor_grants_lifecycle=True)
+        assert v.authority is LifecycleAuthority.HOLD
+
+    def test_floor_plus_presence_acts(self):
+        v = resolve_lifecycle(self.REBOOT, floor_grants_lifecycle=True, presence_posture="human")
+        assert v.authority is LifecycleAuthority.ACT
+        assert "sealed lifecycle record still required" in v.reason
+
+    def test_floor_plus_on_behalf_of_acts(self):
+        v = resolve_lifecycle(self.REBOOT, floor_grants_lifecycle=True, on_behalf_of="mandate:owner")
+        assert v.authority is LifecycleAuthority.ACT
+
+    def test_non_lifecycle_byte_is_not_lifecycle(self):
+        v = resolve_lifecycle(0x19, floor_grants_lifecycle=True, presence_posture="human")
+        assert v.authority is LifecycleAuthority.NOT_LIFECYCLE
+        assert v.action is None
